@@ -14,7 +14,7 @@ A Python command-line application that calculates a basketball player's **True S
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/zubroder/nba_stats_calculator.git
+   git clone https://github.com/zubrode/nba_stats_calculator.git
    ```
 2. Navigate to the project folder and run the script:
    ```bash
