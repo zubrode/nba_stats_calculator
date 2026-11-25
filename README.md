@@ -9,6 +9,7 @@ A Python command-line application that calculates a basketball player's **True S
 - **Automated Efficiency Verdicts:** Categorizes player performance into tiers (Elite/All-Star, Above NBA Average, Below Average, or Low Efficiency).
 - **Input Validation & Error Handling:** Prevents crashes from non-numeric inputs (`try/except`) and handles zero-attempt edge cases safely.
 - **Continuous Analysis Loop:** Allows evaluating multiple players in a single session with strict input validation.
+- **Automatic Mode:** Allows users to search for NBA players via `nba_api` and automatically fetch their latest season averages.
 
 ## How to Run
 
@@ -16,7 +17,26 @@ A Python command-line application that calculates a basketball player's **True S
    ```bash
    git clone https://github.com/zubrode/nba_stats_calculator.git
    ```
-2. Navigate to the project folder and run the script:
+2. Navigate to the folder:
+   ```bash
+   cd nba_stats_calculator
+   ```
+3. Create and activate a virtual environment (recommended):
+   - Windows (PowerShell):
+      ```bash
+      python -m venv .venv
+      .\.venv\Scripts\Activate.ps1
+      ```
+   - macOS/Linux:
+      ```bash
+      python3 -m venv .venv
+      source .venv/bin/activate
+      ```
+4. Install required dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+5. Run the script:
    ```bash
    python main.py
    ```
@@ -26,4 +46,7 @@ A Python command-line application that calculates a basketball player's **True S
 - [x] Core TS% calculation and efficiency tiers
 - [x] Modular function design and error handling
 - [x] Interactive multi-player loop
-- [ ] Integration with `nba_api` for automatic live player stats retrieval
+- [x] Integration with `nba_api` for automatic live player stats retrieval
+- [ ] Additional advanced metrics (eFG%, AST/TOV ratio) and 1v1 player comparison
+- [ ] Interactive "Higher or Lower" NBA stats mini-game
+- [ ] Web interface with Streamlit
