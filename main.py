@@ -1,130 +1,149 @@
-from nba_api.stats.static import players
-from nba_api.stats.endpoints import playercareerstats
+from datetime import datetime
+from api_client import obtener_stats_nba, obtener_medias_nba
+from metrics import CATALOGO_STATS, obtener_metricas_avanzadas, obtener_veredicto_analisis
 
-def calcular_ts(puntos, fga, fta):
-    """Calcula el True Shooting Percentage (TS%) de un jugador."""
-    posesiones_tiro = fga + 0.44 * fta
-    if posesiones_tiro == 0:
-        return 0.0  # Evitar división por cero si el jugador no ha lanzado tiros
-    
-    ts_porcentaje = (puntos / (2 * posesiones_tiro)) * 100
-    return round(ts_porcentaje, 2)
 
-def obtener_stats_nba(nombre_buscado):
-    """Busca un jugador en la NBA y devuelve sus promedios de su última temporada."""
-    resultados = players.find_players_by_full_name(nombre_buscado)
+def obtener_temporada_actual():
+    """Deduce la temporada NBA vigente (ej. '2026-27') a partir de la fecha del sistema."""
+    hoy = datetime.now()
+    anio_inicio = hoy.year if hoy.month >= 10 else hoy.year - 1
+    anio_fin = str(anio_inicio + 1)[-2:]
+    return f"{anio_inicio}-{anio_fin}"
 
-    if not resultados:
-        print(f"\nNo se encontró ningún jugador llamado '{nombre_buscado}'.")
-        return None
 
-    # Priorizar jugadores activos y limitar a las 5 mejores coincidencias
-    resultados_ordenados = sorted(resultados, key=lambda x: x["is_active"], reverse=True)[:5]
+def obtener_perfil_completo(datos):
+    """Combina el Box Score base y las métricas avanzadas en un solo diccionario."""
+    avanzadas = obtener_metricas_avanzadas(datos)
+    perfil = dict(datos)
+    perfil["pra"] = round(datos["puntos"] + datos["rebotes"] + datos["asistencias"], 1)
+    perfil.update(avanzadas)
+    return perfil
 
-    if len(resultados_ordenados) == 1:
-        jugador_elegido = resultados_ordenados[0]
-    else:
-        print("\nSe encontraron varios jugadores:")
-        for i, p in enumerate(resultados_ordenados, start=1):
-            estado = "Activo" if p["is_active"] else "Retirado"
-            print(f"{i}. {p['full_name']} ({estado})")
 
-        while True:
-            try:
-                opcion = int(input("Elige el número del jugador (0 para cancelar): "))
-                if opcion == 0:
-                    return None
-                if 1 <= opcion <= len(resultados_ordenados):
-                    jugador_elegido = resultados_ordenados[opcion - 1]
-                    break
-                print(f"Por favor, introduce un número entre 0 y {len(resultados_ordenados)}.")
-            except ValueError:
-                print("Error: Introduce un número válido.")
+TEMPORADA_ACTUAL = obtener_temporada_actual()
 
-    print(f"\nConsultando estadísticas oficiales de {jugador_elegido['full_name']}...")
-
-    try:
-        carrera = playercareerstats.PlayerCareerStats(
-            player_id=jugador_elegido["id"],
-            per_mode36="PerGame"
-        )
-        df_temporadas = carrera.get_data_frames()[0]
-
-        if df_temporadas.empty:
-            print("Este jugador aún no tiene estadísticas registradas en la NBA.")
-            return None
-
-        ultima_temporada = df_temporadas.iloc[-1]
-
-        return {
-            "nombre": jugador_elegido["full_name"],
-            "temporada": ultima_temporada["SEASON_ID"],
-            "equipo": ultima_temporada["TEAM_ABBREVIATION"],
-            "puntos": float(ultima_temporada["PTS"]),
-            "fga": float(ultima_temporada["FGA"]),
-            "fta": float(ultima_temporada["FTA"]),
-        }
-
-    except Exception as e:
-        print(f"\nError al conectar con la API de la NBA: {e}")
-        return None
-
-# 1. Mensaje de bienvenida
-print("=== CALCULADORA NBA v2.0 ===")
-print("Bienvenido a la calculadora de estadísticas de la NBA!")
+print("=== NBA STATS EXPLORER v3.0 ===")
+print("Bienvenido al analizador de estadísticas de la NBA!")
 
 while True:
-    # 2. Selección de modo
     print("\nModos disponibles:")
-    print("1. Automático (buscar jugador real en la NBA)")
-    print("2. Manual (introducir estadísticas a mano)")
+    print("1. Búsqueda de jugador (Box Score + Métricas Avanzadas)")
+    print("2. Análisis comparativo (Jugador vs. Media de la NBA)")
     modo = input("Elige una opción (1/2): ").strip()
 
     if modo == "1":
         nombre_input = input("\nNombre del jugador a buscar: ").strip()
-        datos = obtener_stats_nba(nombre_input)
+        if not nombre_input:
+            print("Por favor, introduce el nombre de un jugador.")
+            continue
 
+        datos = obtener_stats_nba(nombre_input, elegir_temporada=True)
         if datos is None:
-            continue  # Vuelve al inicio si no se encontró o hubo error
+            continue
 
-        jugador = f"{datos['nombre']} ({datos['temporada']} - {datos['equipo']})"
-        puntos = datos["puntos"]
-        fga = datos["fga"]
-        fta = datos["fta"]
+        perfil = obtener_perfil_completo(datos)
+        titulo = f"{perfil['nombre']} ({perfil['temporada']} - {perfil['equipo']})"
+
+        print(f"\n================ INFORME DE {titulo.upper()} ================")
+        print(f"Partidos jugados: {perfil['gp']} GP | Minutos: {perfil['min']} MIN")
+
+        print("\n[ BOX SCORE BASE ]")
+        print(f"  PTS: {perfil['puntos']}  |  REB: {perfil['rebotes']}  |  AST: {perfil['asistencias']}  |  PRA: {perfil['pra']}")
+        print(f"  STL: {perfil['robos']}  |  BLK: {perfil['tapones']}  |  TOV: {perfil['perdidas']}  |  PF: {perfil['faltas']}")
+        print(f"  Tiros: {perfil['fgm']}/{perfil['fga']} FG | {perfil['fg3m']}/{perfil['fg3a']} 3PT | {perfil['ftm']}/{perfil['fta']} FT")
+
+        print("\n[ MÉTRICAS AVANZADAS ]")
+        print(f"  TS%: {perfil['ts']}%  |  eFG%: {perfil['efg']}%  |  FTr: {perfil['ftr']}")
+        print(f"  AST/TOV: {perfil['ast_tov']}  |  Game Score (GmSc): {perfil['gmsc']}")
+        print("=" * 64)
 
     elif modo == "2":
-        try:
-            jugador = input("\nNombre del jugador: ")
-            puntos = float(input("Puntos anotados por partido: "))
-            fga = float(input("Tiros de campo intentados (FGA): "))
-            fta = float(input("Tiros libres intentados (FTA): "))
-        except ValueError:
-            print("\nError: Por favor, introduce valores numéricos válidos para puntos, FGA y FTA.")
+        nombre_input = input("\nNombre del jugador a analizar: ").strip()
+        if not nombre_input:
+            print("Por favor, introduce el nombre de un jugador.")
             continue
+
+        datos = obtener_stats_nba(nombre_input, elegir_temporada=True)
+        if datos is None:
+            continue
+
+        perfil = obtener_perfil_completo(datos)
+        temp_jugador = perfil["temporada"]
+        comparando_con_actual = False
+
+        if temp_jugador != TEMPORADA_ACTUAL:
+            print(f"\nHas seleccionado la temporada {temp_jugador} de {perfil['nombre']}.")
+            print(f"1. Comparar contra la media de la NBA en {temp_jugador} (misma época)")
+            print(f"2. Comparar contra la media de la NBA actual ({TEMPORADA_ACTUAL})")
+
+            while True:
+                ref = input("Elige referencia (1/2): ").strip()
+                if ref in ("1", "2"):
+                    break
+                print("Opción no válida. Elige '1' o '2'.")
+
+            if ref == "1":
+                medias_nba = obtener_medias_nba(temporada=temp_jugador)
+                if medias_nba is None:
+                    print(f"Usando la temporada actual ({TEMPORADA_ACTUAL}) como referencia alternativa...")
+                    medias_nba = obtener_medias_nba(temporada=None)
+                    comparando_con_actual = True
+            else:
+                medias_nba = obtener_medias_nba(temporada=None)
+                comparando_con_actual = True
+        else:
+            medias_nba = obtener_medias_nba(temporada=None)
+
+        if medias_nba is None:
+            continue
+
+        # Bucle para evaluar múltiples estadísticas del mismo jugador sin repetir la búsqueda
+        while True:
+            print(f"\n¿Qué estadística de {perfil['nombre']} ({temp_jugador}) quieres comparar?")
+            for clave, (_, etiqueta, _) in CATALOGO_STATS.items():
+                print(f"  {clave}. {etiqueta}")
+
+            while True:
+                eleccion = input("Elige el número de la estadística: ").strip()
+                if eleccion in CATALOGO_STATS:
+                    break
+                print("Opción de estadística no válida.")
+
+            campo, nombre_stat, unidad = CATALOGO_STATS[eleccion]
+            valor_jugador = perfil[campo]
+            valor_nba = medias_nba[campo]
+            diferencia = round(valor_jugador - valor_nba, 2)
+            pct_diferencia = round((diferencia / valor_nba) * 100, 1) if valor_nba != 0 else 0.0
+            signo = "+" if diferencia > 0 else ""
+
+            veredicto = obtener_veredicto_analisis(campo, pct_diferencia)
+
+            print(f"\n--- Análisis: {perfil['nombre']} ({temp_jugador}) en {nombre_stat} ---")
+            print(f"  Valor de {perfil['nombre']}: {valor_jugador}{unidad}")
+            print(f"  Media de la NBA [{medias_nba['temporada_ref']}]: {valor_nba}{unidad}")
+            print(f"  Diferencia: {signo}{diferencia}{unidad} ({signo}{pct_diferencia}%)")
+            print(f"  Veredicto: {veredicto}")
+
+            if comparando_con_actual:
+                print("\n  [Nota contextual]: Estás comparando una temporada histórica contra la NBA actual.")
+                print("  Ten en cuenta las diferencias de ritmo de juego (pace), volumen de triples y reglas")
+                print("  entre épocas al interpretar promedios absolutos y eficiencia.")
+
+            while True:
+                otra_stat = input(f"\n¿Quieres analizar otra estadística de {perfil['nombre']}? (s/n): ").strip().lower()
+                if otra_stat in ("s", "n"):
+                    break
+                print("Por favor, introduce 's' para sí o 'n' para no.")
+
+            if otra_stat == "n":
+                break
+
     else:
         print("\nOpción no válida. Por favor, elige '1' o '2'.")
         continue
 
-    # 3. Cálculo del True Shooting (TS%)
-    ts_redondeado = calcular_ts(puntos, fga, fta)
-
-    # 4. Resultados y evaluación
-    print(f"Promedios registrados para {jugador} con {puntos} pts, {fga} FGA y {fta} FTA.")
-    print(f"\n--- Informe de {jugador} ---")
-    print(f"True Shooting Percentage (TS%): {ts_redondeado}%")
-
-    if ts_redondeado >= 60:
-        print("Veredicto: Eficiencia de élite (nivel All-Star / MVP).")
-    elif ts_redondeado >= 57.5:
-        print("Veredicto: Muy eficiente, por encima de la media de la NBA actual.")
-    elif ts_redondeado >= 45:
-        print("Veredicto: Mala temporada, eficiencia por debajo de la media de la NBA actual.")
-    else:
-        print("Veredicto: Mejor probar con otro deporte.")
-
-    # Preguntamos si quiere continuar
     while True:
-        continuar = input("\n¿Quieres analizar otro jugador? (s/n): ").strip().lower()
+        continuar = input("\n¿Quieres realizar otra consulta? (s/n): ").strip().lower()
         if continuar in ("s", "n"):
             break
         print("Por favor, introduce 's' para sí o 'n' para no.")
