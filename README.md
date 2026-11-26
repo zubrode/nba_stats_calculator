@@ -25,6 +25,7 @@ nba_stats_calculator/
 ├── requirements.txt   # Project dependencies
 ├── .gitignore         # Excludes .venv/ and __pycache__/
 └── README.md          # Project documentation
+```
 
 ## How to Run
 
