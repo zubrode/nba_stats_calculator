@@ -13,6 +13,7 @@ A modular Python command-line application that fetches live and historical NBA p
   - **Assist-to-Turnover Ratio (`AST/TOV`)**: Evaluates playmaking efficiency and ball security.
   - **Game Score (`GmSc`)**: John Hollinger's all-in-one single-game productivity metric.
 - **League Benchmark Analysis (Mode 2)**: Compares any player's selected season against rotation-player league averages (`GP >= 10`, `MIN >= 10.0`) with a 5-tier evaluation verdict, supporting both same-era comparisons (from 1996-97 onward) and modern-era benchmarks with pace/era context notices.
+- **Head-to-Head 1v1 Comparison (Mode 3)**: Pits any two players—or two different seasons of the same player—against each other across 11 statistical categories in an aligned side-by-side table, tallying category wins, ties, and cross-era pace context.
 - **In-Memory Session Caching**: Caches league-wide `LeagueDashPlayerStats` queries by season to minimize API calls and speed up multi-stat evaluations.
 
 ## Project Structure
@@ -65,6 +66,6 @@ nba_stats_calculator/
 - [x] Integration with nba_api for automatic live player stats retrieval
 - [x] Modular codebase (api_client.py, metrics.py, main.py) with full box score and advanced metrics (eFG%, FTr, AST/TOV, PRA, GmSc)
 - [x] Historical season selection and 5-tier comparative analysis against NBA league averages
-- [ ] Head-to-head 1v1 player comparison mode
+- [x] Head-to-head 1v1 player comparison mode
 - [ ] Interactive "Higher or Lower" NBA stats mini-game
 - [ ] Web interface with Streamlit

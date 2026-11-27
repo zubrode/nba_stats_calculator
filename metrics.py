@@ -95,3 +95,52 @@ def obtener_veredicto_analisis(campo, pct_diferencia):
             return "Por debajo de la media NBA."
         else:
             return "No es su fuerte."
+        
+
+STATS_INVERSAS = ("perdidas", "faltas")
+
+def comparar_jugadores(perfil_1, perfil_2):
+    """Compara dos perfiles completos en todas las estadísticas del catálogo y devuelve resultados y marcador."""
+    resultados = []
+    victorias_1 = 0
+    victorias_2 = 0
+    empates = 0
+
+    for _, (campo, etiqueta, unidad) in CATALOGO_STATS.items():
+        val_1 = perfil_1[campo]
+        val_2 = perfil_2[campo]
+        diferencia = round(abs(val_1 - val_2), 2)
+
+        # En pérdidas o faltas gana el valor más bajo
+        if campo in STATS_INVERSAS:
+            gana_1 = val_1 < val_2
+            gana_2 = val_2 < val_1
+        else:
+            gana_1 = val_1 > val_2
+            gana_2 = val_2 > val_1
+
+        if gana_1:
+            ganador = perfil_1["nombre"]
+            victorias_1 += 1
+        elif gana_2:
+            ganador = perfil_2["nombre"]
+            victorias_2 += 1
+        else:
+            ganador = "Empate"
+            empates += 1
+
+        resultados.append({
+            "etiqueta": etiqueta,
+            "unidad": unidad,
+            "val_1": val_1,
+            "val_2": val_2,
+            "diferencia": diferencia,
+            "ganador": ganador,
+        })
+
+    return {
+        "filas": resultados,
+        "victorias_1": victorias_1,
+        "victorias_2": victorias_2,
+        "empates": empates,
+    }
